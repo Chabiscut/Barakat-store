@@ -1,0 +1,130 @@
+.profile {
+  position: relative;
+}
+
+.profileButton {
+  max-width: 13rem;
+}
+
+.profileButton > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 50%;
+  background-color: var(--primary-light);
+  background-position: center;
+  background-size: cover;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileMenu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.65rem);
+  right: 0;
+  width: min(19rem, calc(100vw - 2rem));
+  padding: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.profileDetails {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.45rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.largeAvatar {
+  width: 3rem;
+  height: 3rem;
+  font-size: 0.85rem;
+}
+
+.profileText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.profileText strong,
+.profileText > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileText strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.profileText > span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.profileText .profileRole {
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.profileMenuLink,
+.logoutButton {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 0.7rem 0.55rem;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.profileMenuLink {
+  margin-top: 0.35rem;
+}
+
+.profileMenuLink:hover {
+  background: var(--bg-subtle);
+}
+
+.logoutButton {
+  color: #b91c1c;
+}
+
+.logoutButton:hover {
+  background: #fef2f2;
+}
+
+.logoutError {
+  padding: 0.45rem 0.55rem;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}

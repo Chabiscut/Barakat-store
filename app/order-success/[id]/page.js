@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { CheckCircle, Clock, Package, MapPin, CreditCard, ArrowRight, ShoppingBag } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 export default function OrderSuccessPage() {
   const params = useParams();
   const orderId = params?.id;
+  const { clearCart } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const clearedCartOrderId = useRef("");
 
   useEffect(() => {
     async function fetchOrder() {
@@ -28,6 +31,17 @@ export default function OrderSuccessPage() {
     }
     fetchOrder();
   }, [orderId]);
+
+  useEffect(() => {
+    if (
+      ["bkash", "sslcommerz"].includes(order?.paymentMethod) &&
+      order.paymentStatus === "Paid" &&
+      clearedCartOrderId.current !== order._id
+    ) {
+      clearedCartOrderId.current = order._id;
+      clearCart();
+    }
+  }, [clearCart, order]);
 
   if (loading) {
     return (
@@ -85,10 +99,34 @@ export default function OrderSuccessPage() {
           </div>
 
           <h1 style={{ fontSize: "1.75rem", fontWeight: "800", color: "var(--primary)", marginBottom: "0.5rem" }}>
-            Order Placed Successfully!
+            {order.paymentMethod === "bkash"
+              ? order.paymentStatus === "Paid"
+                ? "bKash Payment Successful!"
+                : order.paymentStatus === "Failed"
+                  ? "bKash Payment Not Completed"
+                  : "bKash Payment Confirmation Pending"
+              : order.paymentMethod === "sslcommerz"
+                ? order.paymentStatus === "Paid"
+                  ? "Online Payment Successful!"
+                  : order.paymentStatus === "Failed"
+                    ? "Online Payment Not Completed"
+                    : "Online Payment Confirmation Pending"
+              : "Order Placed Successfully!"}
           </h1>
           <p style={{ color: "#64748b", fontSize: "0.95rem", maxWidth: "480px", margin: "0 auto 1.5rem" }}>
-            Thank you for shopping at Barakat Store. Your order has been registered in our system and is currently being processed.
+            {order.paymentMethod === "bkash"
+              ? order.paymentStatus === "Paid"
+                ? "Your payment is confirmed and your order has been registered."
+                : order.paymentStatus === "Failed"
+                  ? "The payment was not completed. Your order has not been marked as paid."
+                  : "We are still checking your payment with bKash. Please refresh this page in a moment."
+              : order.paymentMethod === "sslcommerz"
+                ? order.paymentStatus === "Paid"
+                  ? "Your payment has been verified by SSLCommerz and your order is registered."
+                  : order.paymentStatus === "Failed"
+                    ? "The payment was not completed. Your order has not been marked as paid."
+                    : "We are checking your payment with SSLCommerz. Please refresh this page in a moment."
+              : "Thank you for shopping at Barakat Store. Your order has been registered in our system and is currently being processed."}
           </p>
 
           <div
@@ -145,7 +183,17 @@ export default function OrderSuccessPage() {
                 <p style={{ fontSize: "0.8rem", color: order.paymentStatus === "Paid" ? "#047857" : "#b45309" }}>
                   {order.paymentStatus === "Paid"
                     ? "Your payment transaction has been verified by our merchant team."
-                    : "Payment verification in progress. Our team will verify your TrxID shortly."}
+                    : order.paymentMethod === "cod"
+                      ? "Pay the delivery representative in cash when your order arrives."
+                      : order.paymentMethod === "bkash"
+                        ? order.paymentStatus === "Failed"
+                          ? "bKash did not confirm this payment. The order remains unpaid."
+                          : "We are checking the payment status with bKash."
+                        : order.paymentMethod === "sslcommerz"
+                          ? order.paymentStatus === "Failed"
+                            ? "SSLCommerz did not confirm this payment. The order remains unpaid."
+                            : "We are checking the payment status with SSLCommerz."
+                      : "Payment verification in progress. Our team will verify your TrxID shortly."}
                 </p>
               </div>
             </div>
@@ -154,13 +202,29 @@ export default function OrderSuccessPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.9rem" }}>
             <div>
               <span style={{ color: "#64748b", fontSize: "0.8rem", display: "block" }}>Payment Method</span>
-              <strong style={{ textTransform: "uppercase" }}>{order.paymentMethod}</strong>
+              <strong>
+                {order.paymentMethod === "cod"
+                  ? "Cash on delivery"
+                  : order.paymentMethod === "bkash"
+                    ? "bKash"
+                    : order.paymentMethod === "sslcommerz"
+                      ? "Nagad / bank / card (SSLCommerz)"
+                    : order.paymentMethod.toUpperCase()}
+              </strong>
             </div>
 
-            <div>
-              <span style={{ color: "#64748b", fontSize: "0.8rem", display: "block" }}>Transaction Reference (TrxID)</span>
-              <strong style={{ fontFamily: "monospace", color: "var(--primary)" }}>{order.transactionId}</strong>
-            </div>
+            {order.paymentMethod !== "cod" && order.transactionId && (
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.8rem", display: "block" }}>
+                  {order.paymentMethod === "bkash"
+                    ? "bKash Transaction ID"
+                    : order.paymentProvider === "sslcommerz"
+                      ? "SSLCommerz Transaction ID"
+                      : "Transaction Reference (TrxID)"}
+                </span>
+                <strong style={{ fontFamily: "monospace", color: "var(--primary)" }}>{order.transactionId}</strong>
+              </div>
+            )}
 
             <div>
               <span style={{ color: "#64748b", fontSize: "0.8rem", display: "block" }}>Recipient Name</span>

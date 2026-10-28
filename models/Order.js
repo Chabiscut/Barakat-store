@@ -14,6 +14,20 @@ const OrderItemSchema = new mongoose.Schema({
   image: { type: String, default: "" },
 });
 
+const ReturnRequestSchema = new mongoose.Schema(
+  {
+    reason: { type: String, required: true, trim: true, maxlength: 500 },
+    status: {
+      type: String,
+      enum: ["Requested", "Approved", "Rejected", "Completed"],
+      default: "Requested",
+    },
+    requestedAt: { type: Date, default: Date.now },
+    adminNote: { type: String, default: "", trim: true, maxlength: 500 },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new mongoose.Schema(
   {
     customer: {
@@ -27,14 +41,23 @@ const OrderSchema = new mongoose.Schema(
     items: [OrderItemSchema],
     paymentMethod: {
       type: String,
-      enum: ["bkash", "nagad", "bank"],
+      enum: ["bkash", "nagad", "bank", "sslcommerz", "cod"],
       required: true,
+    },
+    paymentProvider: {
+      type: String,
+      enum: ["manual", "bkash", "sslcommerz"],
+      default: "manual",
     },
     transactionId: {
       type: String,
-      required: true,
+      required: false,
+      default: "",
       trim: true,
     },
+    bkashPaymentId: { type: String, default: "", select: false },
+    sslcommerzTranId: { type: String, default: "", select: false },
+    sslcommerzValidationId: { type: String, default: "", select: false },
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed", "Refunded"],
@@ -45,6 +68,8 @@ const OrderSchema = new mongoose.Schema(
       enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
       default: "Pending",
     },
+    deliveredAt: { type: Date, default: null },
+    returnRequest: { type: ReturnRequestSchema, default: null },
     subtotal: {
       type: Number,
       required: true,
@@ -62,5 +87,25 @@ const OrderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+const cachedOrderModel = mongoose.models.Order;
+const cachedPaymentMethod = cachedOrderModel?.schema.path("paymentMethod");
+const cachedTransactionIdRequired = cachedOrderModel?.schema.path("transactionId").options.required;
+const cachedTransactionIdOptional =
+  cachedTransactionIdRequired === false ||
+  (typeof cachedTransactionIdRequired === "function" &&
+    cachedTransactionIdRequired.call({ paymentMethod: "cod" }) === false &&
+    cachedTransactionIdRequired.call({ paymentMethod: "bkash" }) === false);
+const cachedSchemaSupportsCod =
+  cachedPaymentMethod?.enumValues.includes("cod") &&
+  cachedPaymentMethod.enumValues.includes("sslcommerz") &&
+  cachedTransactionIdOptional &&
+  cachedOrderModel.schema.path("bkashPaymentId") &&
+  cachedOrderModel.schema.path("sslcommerzTranId") &&
+  cachedOrderModel.schema.path("sslcommerzValidationId");
+
+if (cachedOrderModel && !cachedSchemaSupportsCod) {
+  mongoose.deleteModel("Order");
+}
 
 export default mongoose.models.Order || mongoose.model("Order", OrderSchema);

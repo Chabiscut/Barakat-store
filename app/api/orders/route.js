@@ -42,14 +42,19 @@ export async function POST(request) {
       );
     }
 
-    if (!paymentMethod || !["bkash", "nagad", "bank"].includes(paymentMethod)) {
+    if (!paymentMethod || !["nagad", "bank", "cod"].includes(paymentMethod)) {
       return NextResponse.json(
-        { success: false, error: "Please select a valid payment method (bKash, Nagad, or Bank)." },
+        {
+          success: false,
+          error: paymentMethod === "bkash"
+            ? "Please use the secure bKash checkout to pay online."
+            : "Please select a valid payment method.",
+        },
         { status: 400 }
       );
     }
 
-    if (!transactionId || transactionId.trim().length < 4) {
+    if (paymentMethod !== "cod" && (!transactionId || transactionId.trim().length < 4)) {
       return NextResponse.json(
         { success: false, error: "A valid Transaction ID or Bank Reference is required." },
         { status: 400 }
@@ -72,8 +77,8 @@ export async function POST(request) {
       },
       items,
       paymentMethod,
-      transactionId: transactionId.trim().toUpperCase(),
-      paymentStatus: "Pending", // Awaits admin/gateway verification
+      transactionId: paymentMethod === "cod" ? "" : transactionId.trim().toUpperCase(),
+      paymentStatus: "Pending",
       orderStatus: "Pending",
       subtotal,
       deliveryFee,

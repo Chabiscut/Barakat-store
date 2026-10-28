@@ -9,6 +9,9 @@ export default function CustomerOrdersPage() {
   const { data: session } = useSession();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [returnReasons, setReturnReasons] = useState({});
+  const [returnErrors, setReturnErrors] = useState({});
+  const [returningOrderId, setReturningOrderId] = useState("");
 
   useEffect(() => {
     async function loadOrders() {
@@ -41,6 +44,51 @@ export default function CustomerOrdersPage() {
         return { bg: "#fef3c7", color: "#92400e", border: "#fde68a" };
       default:
         return { bg: "#f8fafc", color: "#475569", border: "#e2e8f0" };
+    }
+  };
+
+  const isWithinReturnWindow = (order) => {
+    const deliveredAt = order.deliveredAt || order.updatedAt;
+    return Date.now() <= new Date(deliveredAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+  };
+
+  const submitReturnRequest = async (order) => {
+    const reason = returnReasons[order._id]?.trim() || "";
+    setReturnErrors((current) => ({ ...current, [order._id]: "" }));
+
+    if (reason.length < 5 || reason.length > 500) {
+      setReturnErrors((current) => ({
+        ...current,
+        [order._id]: "Please explain the return reason in 5 to 500 characters.",
+      }));
+      return;
+    }
+
+    setReturningOrderId(order._id);
+    try {
+      const response = await fetch(`/api/orders/${order._id}/return`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Could not submit your return request.");
+      }
+
+      setOrders((current) =>
+        current.map((item) =>
+          item._id === order._id ? { ...item, returnRequest: result.data } : item
+        )
+      );
+    } catch (error) {
+      setReturnErrors((current) => ({
+        ...current,
+        [order._id]: error.message || "Could not submit your return request.",
+      }));
+    } finally {
+      setReturningOrderId("");
     }
   };
 
@@ -175,7 +223,7 @@ export default function CustomerOrdersPage() {
                         ৳{order.totalAmount.toLocaleString()}
                       </span>
                       <div style={{ fontSize: "0.78rem", color: order.paymentStatus === "Paid" ? "#059669" : "#d97706", fontWeight: "700" }}>
-                        Payment: {order.paymentStatus} ({order.paymentMethod.toUpperCase()})
+                        Payment: {order.paymentStatus} ({order.paymentMethod === "cod" ? "Cash on delivery" : order.paymentMethod.toUpperCase()})
                       </div>
                     </div>
                   </div>
@@ -212,9 +260,91 @@ export default function CustomerOrdersPage() {
                       Delivery: <strong>{order.customer.address}, {order.customer.city}</strong>
                     </div>
                     <div>
-                      TrxID: <strong style={{ fontFamily: "monospace" }}>{order.transactionId}</strong>
+                      {order.paymentMethod === "cod" ? (
+                        <span>Payment: <strong>Cash on delivery</strong></span>
+                      ) : order.paymentMethod === "sslcommerz" ? (
+                        <span>Payment: <strong>Nagad / bank / card (SSLCommerz)</strong></span>
+                      ) : order.transactionId ? (
+                        <span>TrxID: <strong style={{ fontFamily: "monospace" }}>{order.transactionId}</strong></span>
+                      ) : (
+                        <span>Payment: <strong>{order.paymentMethod === "bkash" ? "bKash" : order.paymentMethod}</strong></span>
+                      )}
                     </div>
                   </div>
+
+                  {order.returnRequest ? (
+                    <div
+                      style={{
+                        marginTop: "1rem",
+                        padding: "0.85rem 1rem",
+                        border: "1px solid #fde68a",
+                        borderRadius: "10px",
+                        background: "#fffbeb",
+                        color: "#92400e",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Return request: <strong>{order.returnRequest.status}</strong>
+                      <p style={{ marginTop: "0.3rem" }}>{order.returnRequest.reason}</p>
+                      <p style={{ marginTop: "0.3rem" }}>Our team will contact you about the next steps.</p>
+                    </div>
+                  ) : order.orderStatus === "Delivered" && isWithinReturnWindow(order) ? (
+                    <div
+                      style={{
+                        marginTop: "1rem",
+                        padding: "1rem",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <label
+                        htmlFor={`return-reason-${order._id}`}
+                        style={{ display: "block", marginBottom: "0.5rem", fontWeight: "700", fontSize: "0.9rem" }}
+                      >
+                        Not happy with this order? Request a return within 7 days of delivery.
+                      </label>
+                      <p style={{ marginBottom: "0.65rem", color: "#64748b", fontSize: "0.8rem" }}>
+                        Items should be unworn, unwashed, and have their original tags. Our team will review your request and contact you.
+                      </p>
+                      <textarea
+                        id={`return-reason-${order._id}`}
+                        rows={3}
+                        maxLength={500}
+                        value={returnReasons[order._id] || ""}
+                        onChange={(event) =>
+                          setReturnReasons((current) => ({ ...current, [order._id]: event.target.value }))
+                        }
+                        placeholder="Tell us why you would like to return these items"
+                        style={{
+                          width: "100%",
+                          padding: "0.7rem",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          resize: "vertical",
+                          font: "inherit",
+                        }}
+                      />
+                      {returnErrors[order._id] && (
+                        <p role="alert" style={{ marginTop: "0.5rem", color: "#b91c1c", fontSize: "0.82rem" }}>
+                          {returnErrors[order._id]}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={returningOrderId === order._id}
+                        onClick={() => submitReturnRequest(order)}
+                        style={{ marginTop: "0.65rem" }}
+                      >
+                        {returningOrderId === order._id ? "Submitting..." : "Request a return"}
+                      </button>
+                    </div>
+                  ) : order.orderStatus === "Delivered" ? (
+                    <p style={{ marginTop: "1rem", color: "#64748b", fontSize: "0.85rem" }}>
+                      The 7-day return request period has ended.
+                    </p>
+                  ) : null}
                 </div>
               );
             })}

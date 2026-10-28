@@ -25,7 +25,15 @@ export async function PATCH(request, context) {
     const { orderStatus, paymentStatus } = await request.json();
 
     const updateFields = {};
-    if (orderStatus) updateFields.orderStatus = orderStatus;
+    if (orderStatus) {
+      updateFields.orderStatus = orderStatus;
+      if (orderStatus === "Delivered") {
+        const order = await Order.findById(id);
+        if (order && order.orderStatus !== "Delivered") {
+          updateFields.deliveredAt = new Date();
+        }
+      }
+    }
     if (paymentStatus) updateFields.paymentStatus = paymentStatus;
 
     const updated = await Order.findByIdAndUpdate(id, updateFields, {

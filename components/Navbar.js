@@ -1,15 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ShoppingBag, Search, Sparkles, User, Menu, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useSession, signOut } from "@/lib/auth-client";
+import styles from "./Navbar.module.css";
 
 export default function Navbar({ searchQuery, setSearchQuery, selectedCategory, setSelectedCategory }) {
+  const router = useRouter();
   const { cartCount, setIsCartOpen } = useCart();
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const [failedProfileImage, setFailedProfileImage] = useState("");
+  const profileMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!profileMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event) => {
+      if (!profileMenuRef.current?.contains(event.target)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [profileMenuOpen]);
 
   const navCategories = [
     { label: "All Items", id: "all" },
@@ -26,6 +59,35 @@ export default function Navbar({ searchQuery, setSearchQuery, selectedCategory, 
     }
     setMobileMenuOpen(false);
   };
+
+  const handleSignOut = async () => {
+    setLogoutError("");
+
+    try {
+      const result = await signOut();
+      if (result?.error) {
+        setLogoutError(result.error.message || "Could not sign out. Please try again.");
+        return;
+      }
+
+      setProfileMenuOpen(false);
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      setLogoutError(error.message || "Could not sign out. Please try again.");
+    }
+  };
+
+  const userName = session?.user?.name?.trim() || "Account";
+  const userEmail = session?.user?.email || "";
+  const profileImage = session?.user?.image;
+  const userInitials = userName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  const showProfileImage = profileImage && profileImage !== failedProfileImage;
 
   return (
     <>
@@ -94,14 +156,94 @@ export default function Navbar({ searchQuery, setSearchQuery, selectedCategory, 
                     </Link>
                   )}
 
-                  <button
-                    onClick={() => signOut()}
-                    className="action-btn"
-                    title={`Signed in as ${session.user.email}. Click to sign out.`}
-                  >
-                    <User size={16} />
-                    <span>{session.user.name?.split(" ")[0] || "Account"}</span>
-                  </button>
+                  <div className={styles.profile} ref={profileMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLogoutError("");
+                        setProfileMenuOpen((open) => !open);
+                      }}
+                      className={`action-btn ${styles.profileButton}`}
+                      title="Open your account menu"
+                      aria-haspopup="menu"
+                      aria-expanded={profileMenuOpen}
+                      aria-controls="profile-menu"
+                    >
+                      <span className={styles.avatar} aria-hidden="true">
+                        {showProfileImage ? (
+                          <Image
+                            className={styles.avatarImage}
+                            src={profileImage}
+                            alt=""
+                            width={48}
+                            height={48}
+                            unoptimized
+                            referrerPolicy="no-referrer"
+                            onError={() => setFailedProfileImage(profileImage)}
+                          />
+                        ) : (
+                          userInitials || <User size={16} />
+                        )}
+                      </span>
+                      <span>{userName.split(" ")[0]}</span>
+                    </button>
+
+                    {profileMenuOpen && (
+                      <div className={styles.profileMenu} id="profile-menu" role="menu">
+                        <div className={styles.profileDetails}>
+                          <span className={`${styles.avatar} ${styles.largeAvatar}`} aria-hidden="true">
+                            {showProfileImage ? (
+                              <Image
+                                className={styles.avatarImage}
+                                src={profileImage}
+                                alt=""
+                                width={48}
+                                height={48}
+                                unoptimized
+                                referrerPolicy="no-referrer"
+                                onError={() => setFailedProfileImage(profileImage)}
+                              />
+                            ) : (
+                              userInitials || <User size={20} />
+                            )}
+                          </span>
+                          <div className={styles.profileText}>
+                            <strong title={userName}>{userName}</strong>
+                            <span title={userEmail}>{userEmail}</span>
+                            {session.user.role && (
+                              <span className={styles.profileRole}>
+                                {session.user.role === "admin" ? "Administrator" : "Customer"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <Link
+                          href="/orders"
+                          className={styles.profileMenuLink}
+                          role="menuitem"
+                          onClick={() => setProfileMenuOpen(false)}
+                        >
+                          View my orders
+                        </Link>
+
+                        {logoutError && (
+                          <p className={styles.logoutError} role="alert">
+                            {logoutError}
+                          </p>
+                        )}
+
+                        <button
+                          type="button"
+                          className={styles.logoutButton}
+                          onClick={handleSignOut}
+                          role="menuitem"
+                        >
+                          Sign out
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <Link href="/auth/signin" className="action-btn" title="Sign In with Google">

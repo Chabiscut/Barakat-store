@@ -433,6 +433,7 @@ export default function AdminDashboard() {
                       <th style={{ padding: "0.85rem 1rem" }}>Payment (Method & TrxID)</th>
                       <th style={{ padding: "0.85rem 1rem" }}>Verify Payment</th>
                       <th style={{ padding: "0.85rem 1rem" }}>Order Status</th>
+                      <th style={{ padding: "0.85rem 1rem" }}>Return Request</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -472,15 +473,19 @@ export default function AdminDashboard() {
                               borderRadius: "4px",
                               fontSize: "0.75rem",
                               fontWeight: "700",
-                              background: ord.paymentMethod === "bkash" ? "#fdf2f8" : ord.paymentMethod === "nagad" ? "#fff7ed" : "#eff6ff",
-                              color: ord.paymentMethod === "bkash" ? "#be185d" : ord.paymentMethod === "nagad" ? "#c2410c" : "#1e40af",
+                              background: ord.paymentMethod === "bkash" ? "#fdf2f8" : ord.paymentMethod === "nagad" ? "#fff7ed" : ord.paymentMethod === "cod" ? "#ecfdf5" : "#eff6ff",
+                              color: ord.paymentMethod === "bkash" ? "#be185d" : ord.paymentMethod === "nagad" ? "#c2410c" : ord.paymentMethod === "cod" ? "#047857" : "#1e40af",
                               textTransform: "uppercase",
                             }}
                           >
-                            {ord.paymentMethod}
+                            {ord.paymentMethod === "cod"
+                              ? "Cash on delivery"
+                              : ord.paymentMethod === "sslcommerz"
+                                ? "Nagad / bank / card (SSLCommerz)"
+                                : ord.paymentMethod}
                           </span>
                           <div style={{ fontFamily: "monospace", fontSize: "0.78rem", fontWeight: "700", marginTop: "0.3rem" }}>
-                            {ord.transactionId}
+                            {ord.transactionId || "No transaction ID"}
                           </div>
                         </td>
 
@@ -526,6 +531,22 @@ export default function AdminDashboard() {
                             <option value="Delivered">Delivered</option>
                             <option value="Cancelled">Cancelled</option>
                           </select>
+                        </td>
+
+                        <td style={{ padding: "1rem", minWidth: "180px" }}>
+                          {ord.returnRequest ? (
+                            <>
+                              <strong>{ord.returnRequest.status}</strong>
+                              <div style={{ marginTop: "0.3rem", maxWidth: "240px", color: "#64748b", fontSize: "0.78rem" }}>
+                                {ord.returnRequest.reason}
+                              </div>
+                              <div style={{ marginTop: "0.25rem", color: "#94a3b8", fontSize: "0.72rem" }}>
+                                {new Date(ord.returnRequest.requestedAt).toLocaleDateString()}
+                              </div>
+                            </>
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

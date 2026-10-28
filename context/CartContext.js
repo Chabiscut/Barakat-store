@@ -1,32 +1,58 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useSyncExternalStore } from "react";
 
 const CartContext = createContext(null);
+const EMPTY_CART = [];
+let cartSnapshot = EMPTY_CART;
+const cartListeners = new Set();
 
-export function CartProvider({ children }) {
-  const [cart, setCart] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("barakat_cart");
-        return stored ? JSON.parse(stored) : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
+function subscribeToCart(listener) {
+  cartListeners.add(listener);
+  return () => cartListeners.delete(listener);
+}
 
-  // Save cart changes to localStorage
-  useEffect(() => {
+function getCartSnapshot() {
+  return cartSnapshot;
+}
+
+function getServerCartSnapshot() {
+  return EMPTY_CART;
+}
+
+function updateCartSnapshot(nextCart, persist = true) {
+  cartSnapshot = nextCart;
+
+  if (persist) {
     try {
-      localStorage.setItem("barakat_cart", JSON.stringify(cart));
+      localStorage.setItem("barakat_cart", JSON.stringify(nextCart));
     } catch {
       // Ignore localStorage write errors
     }
-  }, [cart]);
+  }
+
+  cartListeners.forEach((listener) => listener());
+}
+
+export function CartProvider({ children }) {
+  const cart = useSyncExternalStore(subscribeToCart, getCartSnapshot, getServerCartSnapshot);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("barakat_cart");
+      const parsedCart = stored ? JSON.parse(stored) : EMPTY_CART;
+      updateCartSnapshot(Array.isArray(parsedCart) ? parsedCart : EMPTY_CART, false);
+    } catch {
+      updateCartSnapshot(EMPTY_CART, false);
+    }
+  }, []);
+
+  const setCart = (update) => {
+    const nextCart = typeof update === "function" ? update(cartSnapshot) : update;
+    updateCartSnapshot(nextCart);
+  };
 
   const showToast = (message) => {
     setToastMessage(message);

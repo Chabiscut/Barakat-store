@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShieldCheck, CheckCircle2, AlertCircle, ShoppingBag, CreditCard, Lock } from "lucide-react";
+import { ArrowLeft, ShieldCheck, CheckCircle2, AlertCircle, ShoppingBag, Lock } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "@/lib/auth-client";
 
@@ -23,7 +23,6 @@ export default function CheckoutPage() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState("bkash");
-  const [transactionId, setTransactionId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -49,15 +48,16 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!transactionId || transactionId.trim().length < 4) {
-      setErrorMsg(`Please enter a valid Transaction ID / Reference for your ${paymentMethod.toUpperCase()} payment.`);
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/orders", {
+      const isHostedCheckout = ["bkash", "sslcommerz"].includes(paymentMethod);
+      const checkoutPath = paymentMethod === "bkash"
+        ? "/api/payments/bkash"
+        : paymentMethod === "sslcommerz"
+          ? "/api/payments/sslcommerz"
+          : "/api/orders";
+      const response = await fetch(checkoutPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,8 +67,7 @@ export default function CheckoutPage() {
             email: customerEmail,
           },
           items: cart,
-          paymentMethod,
-          transactionId,
+          ...(!isHostedCheckout ? { paymentMethod } : {}),
         }),
       });
 
@@ -76,6 +75,11 @@ export default function CheckoutPage() {
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Failed to place order.");
+      }
+
+      if (isHostedCheckout) {
+        window.location.assign(data.paymentUrl);
+        return;
       }
 
       clearCart();
@@ -355,7 +359,7 @@ export default function CheckoutPage() {
               </h3>
 
               {/* Payment selector tabs */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("bkash")}
@@ -370,45 +374,61 @@ export default function CheckoutPage() {
                   }}
                 >
                   <span style={{ fontSize: "1.05rem", fontWeight: "800", color: "#e2136e" }}>bKash</span>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Instant Mobile Banking</div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Secure checkout on bKash</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("nagad")}
+                  onClick={() => setPaymentMethod("sslcommerz")}
                   style={{
                     padding: "1rem 0.5rem",
                     borderRadius: "10px",
-                    border: `2px solid ${paymentMethod === "nagad" ? "#f7941d" : "#e2e8f0"}`,
-                    background: paymentMethod === "nagad" ? "#fff7ed" : "#ffffff",
+                    border: `2px solid ${paymentMethod === "sslcommerz" ? "#1e3a8a" : "#e2e8f0"}`,
+                    background: paymentMethod === "sslcommerz" ? "#eff6ff" : "#ffffff",
                     textAlign: "center",
                     cursor: "pointer",
                     transition: "all 150ms ease",
                   }}
                 >
-                  <span style={{ fontSize: "1.05rem", fontWeight: "800", color: "#ea580c" }}>Nagad</span>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Digital Post Office</div>
+                  <span style={{ fontSize: "1.05rem", fontWeight: "800", color: "#1e3a8a" }}>Nagad / Bank / Card</span>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Secure SSLCommerz checkout</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("bank")}
+                  onClick={() => setPaymentMethod("cod")}
                   style={{
                     padding: "1rem 0.5rem",
                     borderRadius: "10px",
-                    border: `2px solid ${paymentMethod === "bank" ? "#1e3a8a" : "#e2e8f0"}`,
-                    background: paymentMethod === "bank" ? "#eff6ff" : "#ffffff",
+                    border: `2px solid ${paymentMethod === "cod" ? "#059669" : "#e2e8f0"}`,
+                    background: paymentMethod === "cod" ? "#ecfdf5" : "#ffffff",
                     textAlign: "center",
                     cursor: "pointer",
                     transition: "all 150ms ease",
                   }}
                 >
-                  <span style={{ fontSize: "1.05rem", fontWeight: "800", color: "#1e3a8a" }}>Bank Account</span>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Direct Transfer / Cards</div>
+                  <span style={{ fontSize: "1.05rem", fontWeight: "800", color: "#047857" }}>Cash on Delivery</span>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>Pay when your order arrives</div>
                 </button>
               </div>
 
               {/* Instructions per payment provider */}
+              {paymentMethod === "cod" && (
+                <div
+                  style={{
+                    padding: "1.25rem",
+                    background: "#ecfdf5",
+                    borderRadius: "10px",
+                    border: "1px solid #a7f3d0",
+                    marginBottom: "1.5rem",
+                    color: "#065f46",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Pay ৳{grandTotal.toLocaleString()} in cash to the delivery representative when your order arrives. No advance payment or transaction ID is needed.
+                </div>
+              )}
+
               {paymentMethod === "bkash" && (
                 <div
                   style={{
@@ -421,46 +441,15 @@ export default function CheckoutPage() {
                   }}
                 >
                   <p style={{ fontWeight: "700", color: "#9d174d", marginBottom: "0.5rem" }}>
-                    bKash Payment Instructions:
+                    Secure bKash checkout
                   </p>
-                  <ol style={{ paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.35rem", color: "#831843" }}>
-                    <li>Open your bKash App or dial *247#</li>
-                    <li>Choose <strong>Make Payment</strong> (or Send Money)</li>
-                    <li>Enter Merchant Wallet: <strong>01712-345678</strong></li>
-                    <li>Enter Amount: <strong>৳{grandTotal.toLocaleString()}</strong></li>
-                    <li>Reference: <strong>BARAKAT</strong></li>
-                    <li>Enter your PIN and complete transaction</li>
-                    <li>Copy your <strong>Transaction ID (TrxID)</strong> and paste below:</li>
-                  </ol>
+                  <p style={{ color: "#831843" }}>
+                    Continue to bKash to enter your wallet number and complete payment. bKash handles your verification code and PIN securely; Barakat Store never sees or stores them.
+                  </p>
                 </div>
               )}
 
-              {paymentMethod === "nagad" && (
-                <div
-                  style={{
-                    padding: "1.25rem",
-                    background: "#fff7ed",
-                    borderRadius: "10px",
-                    border: "1px solid #fed7aa",
-                    marginBottom: "1.5rem",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <p style={{ fontWeight: "700", color: "#c2410c", marginBottom: "0.5rem" }}>
-                    Nagad Payment Instructions:
-                  </p>
-                  <ol style={{ paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.35rem", color: "#9a3412" }}>
-                    <li>Open your Nagad App or dial *167#</li>
-                    <li>Select <strong>Merchant Pay</strong></li>
-                    <li>Enter Merchant Account: <strong>01912-345678</strong></li>
-                    <li>Enter Exact Amount: <strong>৳{grandTotal.toLocaleString()}</strong></li>
-                    <li>Counter / Ref: <strong>BARAKAT</strong></li>
-                    <li>Confirm with your PIN & copy the <strong>Transaction ID</strong>:</li>
-                  </ol>
-                </div>
-              )}
-
-              {paymentMethod === "bank" && (
+              {paymentMethod === "sslcommerz" && (
                 <div
                   style={{
                     padding: "1.25rem",
@@ -472,52 +461,13 @@ export default function CheckoutPage() {
                   }}
                 >
                   <p style={{ fontWeight: "700", color: "#1e40af", marginBottom: "0.5rem" }}>
-                    Official Bank Account Details:
+                    Secure online checkout
                   </p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", color: "#1e3a8a", fontSize: "0.85rem" }}>
-                    <div>Bank Name: <strong>The City Bank Ltd.</strong></div>
-                    <div>Account Name: <strong>Barakat Store Ltd.</strong></div>
-                    <div>Account Number: <strong>150-291-8840001</strong></div>
-                    <div>Branch: <strong>Gulshan-2, Dhaka</strong></div>
-                    <div>Routing Number: <strong>225275357</strong></div>
-                  </div>
-                  <p style={{ marginTop: "0.75rem", color: "#1e40af", fontSize: "0.8rem" }}>
-                    Make an online transfer, deposit, or BEFTN/NPSB, then paste the <strong>Reference / Slip Number</strong> below.
+                  <p style={{ color: "#1e3a8a" }}>
+                    Continue to SSLCommerz and choose Nagad, a bank, or a supported card. Any payment verification and sensitive details stay with the payment provider; Barakat Store does not collect your PIN or card security code.
                   </p>
                 </div>
               )}
-
-              {/* Transaction Reference Input */}
-              <div>
-                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "700", marginBottom: "0.4rem" }}>
-                  {paymentMethod === "bank" ? "Bank Transfer Reference / Deposit Slip *" : `${paymentMethod.toUpperCase()} Transaction ID (TrxID) *`}
-                </label>
-                <div style={{ position: "relative" }}>
-                  <CreditCard size={18} color="#94a3b8" style={{ position: "absolute", left: "0.85rem", top: "50%", transform: "translateY(-50%)" }} />
-                  <input
-                    type="text"
-                    required
-                    placeholder={paymentMethod === "bank" ? "e.g. REF-CITY-901842" : "e.g. 9J82KS90A"}
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value.toUpperCase())}
-                    style={{
-                      width: "100%",
-                      height: "2.75rem",
-                      padding: "0 1rem 0 2.5rem",
-                      borderRadius: "8px",
-                      border: "2px solid #cbd5e1",
-                      fontSize: "0.95rem",
-                      fontWeight: "700",
-                      letterSpacing: "0.05em",
-                      outline: "none",
-                      textTransform: "uppercase",
-                    }}
-                  />
-                </div>
-                <p style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "0.35rem" }}>
-                  Our system verifies transactions before marking orders as paid.
-                </p>
-              </div>
 
               {/* Submit Button */}
               <button
@@ -531,7 +481,17 @@ export default function CheckoutPage() {
                   cursor: (!session?.user || cart.length === 0) ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "Processing Your Order..." : `Confirm & Place Order (৳${grandTotal.toLocaleString()})`}
+                {submitting
+                  ? paymentMethod === "bkash"
+                    ? "Connecting to bKash..."
+                    : paymentMethod === "sslcommerz"
+                      ? "Connecting to secure checkout..."
+                      : "Processing Your Order..."
+                  : paymentMethod === "bkash"
+                    ? `Continue to bKash (৳${grandTotal.toLocaleString()})`
+                    : paymentMethod === "sslcommerz"
+                      ? `Continue to secure checkout (৳${grandTotal.toLocaleString()})`
+                    : `Confirm & Place Order (৳${grandTotal.toLocaleString()})`}
               </button>
             </div>
           </form>
