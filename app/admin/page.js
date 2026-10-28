@@ -50,29 +50,38 @@ export default function AdminDashboard() {
     description: "",
   });
 
-  const fetchData = async () => {
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  const fetchData = () => {
     setLoading(true);
-    try {
-      const [ordersRes, productsRes] = await Promise.all([
-        fetch("/api/orders"),
-        fetch("/api/products"),
-      ]);
-
-      const ordersJson = await ordersRes.json();
-      const productsJson = await productsRes.json();
-
-      if (ordersJson.success) setOrders(ordersJson.data);
-      if (productsJson.success) setProducts(productsJson.data);
-    } catch (err) {
-      console.error("Admin data fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
+    setReloadTrigger((prev) => prev + 1);
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    let isCancelled = false;
+    async function loadData() {
+      try {
+        const [ordersRes, productsRes] = await Promise.all([
+          fetch("/api/orders"),
+          fetch("/api/products"),
+        ]);
+        const ordersJson = await ordersRes.json();
+        const productsJson = await productsRes.json();
+        if (!isCancelled) {
+          if (ordersJson.success) setOrders(ordersJson.data);
+          if (productsJson.success) setProducts(productsJson.data);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Admin data fetch error:", err);
+        if (!isCancelled) setLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      isCancelled = true;
+    };
+  }, [reloadTrigger]);
 
   const showNotification = (msg) => {
     setActionMsg(msg);

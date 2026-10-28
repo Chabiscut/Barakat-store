@@ -5,21 +5,19 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("barakat_cart");
+        return stored ? JSON.parse(stored) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
-
-  // Load cart from localStorage on client mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("barakat_cart");
-      if (stored) {
-        setCart(JSON.parse(stored));
-      }
-    } catch {
-      // Ignore localStorage read errors
-    }
-  }, []);
 
   // Save cart changes to localStorage
   useEffect(() => {

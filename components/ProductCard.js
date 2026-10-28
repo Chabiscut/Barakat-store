@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Star, ShoppingBag, Check } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
@@ -9,6 +10,7 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || "M");
   const [isAdded, setIsAdded] = useState(false);
+  const productId = product.id || product._id;
 
   const handleAdd = () => {
     addToCart(product, selectedSize);
@@ -21,7 +23,7 @@ export default function ProductCard({ product }) {
   return (
     <div className="product-card">
       {/* Product Image & Badges */}
-      <div className="product-image-box">
+      <Link href={`/products/${productId}`} className="product-image-box" style={{ display: "block" }}>
         <Image
           src={product.image}
           alt={product.name}
@@ -35,7 +37,7 @@ export default function ProductCard({ product }) {
         {product.isNew && (
           <span className="product-badge-new">NEW</span>
         )}
-      </div>
+      </Link>
 
       {/* Product Info */}
       <div className="product-info">
@@ -48,9 +50,11 @@ export default function ProductCard({ product }) {
           </div>
         </div>
 
-        <h3 className="product-title" title={product.name}>
-          {product.name}
-        </h3>
+        <Link href={`/products/${productId}`}>
+          <h3 className="product-title" title={product.name}>
+            {product.name}
+          </h3>
+        </Link>
 
         <p className="product-description">{product.description}</p>
 

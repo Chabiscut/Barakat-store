@@ -18,11 +18,11 @@ export async function POST() {
 
     // Prepare products without custom mock id
     const productsToInsert = initialProducts.map((p) => {
-      // eslint-disable-next-line no-unused-vars
-      const { id, isNew, ...rest } = p;
+      const rest = { ...p };
+      delete rest.id;
       return {
         ...rest,
-        isNewItem: Boolean(isNew),
+        isNewItem: Boolean(p.isNew),
       };
     });
 

@@ -27,16 +27,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Pre-fill user details if signed in
-  useEffect(() => {
-    if (session?.user) {
-      setFormData((prev) => ({
-        ...prev,
-        name: prev.name || session.user.name || "",
-        email: prev.email || session.user.email || "",
-      }));
-    }
-  }, [session]);
+  const customerName = formData.name !== "" ? formData.name : (session?.user?.name || "");
+  const customerEmail = formData.email !== "" ? formData.email : (session?.user?.email || "");
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
@@ -52,7 +44,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!formData.name || !formData.phone || !formData.address) {
+    if (!customerName || !formData.phone || !formData.address) {
       setErrorMsg("Please fill in your complete delivery name, phone number, and address.");
       return;
     }
@@ -69,7 +61,11 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: formData,
+          customer: {
+            ...formData,
+            name: customerName,
+            email: customerEmail,
+          },
           items: cart,
           paymentMethod,
           transactionId,
@@ -210,7 +206,7 @@ export default function CheckoutPage() {
                     type="text"
                     required
                     placeholder="Recipient name"
-                    value={formData.name}
+                    value={customerName}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     style={{
                       width: "100%",
@@ -255,7 +251,7 @@ export default function CheckoutPage() {
                   type="email"
                   required
                   placeholder="recipient@gmail.com"
-                  value={formData.email}
+                  value={customerEmail}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   style={{
                     width: "100%",
