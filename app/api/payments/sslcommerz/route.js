@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { getSslcommerzConfig, getStoreBaseUrl } from "@/lib/sslcommerz";
 import { resolveOrderItems } from "@/lib/order-checkout";
@@ -17,7 +17,7 @@ function getCustomerAddress(customer) {
 export async function POST(request) {
   let order;
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getAuth().api.getSession({ headers: request.headers });
     if (!session?.user?.email) {
       return NextResponse.json(
         { success: false, error: "Please sign in before starting checkout." },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 
 export async function POST(request) {
   try {
@@ -25,7 +25,7 @@ export async function POST(request) {
 
     // Try sign up first
     try {
-      result = await auth.api.signUpEmail({
+      result = await getAuth().api.signUpEmail({
         body: {
           email: cleanEmail,
           password: defaultPassword,
@@ -37,7 +37,7 @@ export async function POST(request) {
     } catch {
       // Already registered - sign in instead
       try {
-        result = await auth.api.signInEmail({
+        result = await getAuth().api.signInEmail({
           body: {
             email: cleanEmail,
             password: defaultPassword,

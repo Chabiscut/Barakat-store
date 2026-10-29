@@ -1,0 +1,393 @@
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/api/auth/[...all]/route.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/api/auth/quick-gmail/route.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/auth/signin/page.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/auth.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/mongodb.js', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/README.md b/README.md[m
+[1mindex e0398cd..3513c58 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -65,4 +65,18 @@[m [mYou can check out [the Next.js GitHub repository](https://github.com/vercel/next[m
+ [m
+ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.[m
+ [m
+[32m+[m[32mSet these server-side environment variables in Vercel (and in `.env.local` for local development). Configure `BETTER_AUTH_URL` separately for each Vercel environment that uses a different domain:[m
+[32m+[m
+[32m+[m[32m| Variable | Required | Value |[m
+[32m+[m[32m| --- | --- | --- |[m
+[32m+[m[32m| `MONGODB_URI` | Yes | A MongoDB connection string beginning with `mongodb+srv://` or `mongodb://`. Copy the connection string from your MongoDB provider and replace its username, password, and database as needed. |[m
+[32m+[m[32m| `BETTER_AUTH_SECRET` | Yes | A long, random secret used to sign authentication data. |[m
+[32m+[m[32m| `BETTER_AUTH_URL` | Yes in production | The canonical public HTTPS URL of this deployment, with no trailing slash. |[m
+[32m+[m[32m| `GOOGLE_CLIENT_ID` | For Google sign-in | OAuth client ID from Google Cloud. |[m
+[32m+[m[32m| `GOOGLE_CLIENT_SECRET` | For Google sign-in | OAuth client secret from Google Cloud. |[m
+[32m+[m
+[32m+[m[32mSet optional payment credentials only if enabling those payment providers. Do not commit real credentials or prefix server-only secrets with `NEXT_PUBLIC_`. Remove any surrounding quotes or copied whitespace/newlines from the MongoDB connection string. The application validates configuration and initializes database clients when a request needs them, rather than while Next.js collects route configuration during the build.[m
+[32m+[m
+[32m+[m[32mFor Google sign-in, add the production site's origin to the Google OAuth client's authorized JavaScript origins and `https://<your-domain>/api/auth/callback/google` to its authorized redirect URIs.[m
+[32m+[m
+ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.[m
+[1mdiff --git a/app/api/auth/[...all]/route.js b/app/api/auth/[...all]/route.js[m
+[1mindex 5b67b06..3c21c22 100644[m
+[1m--- a/app/api/auth/[...all]/route.js[m
+[1m+++ b/app/api/auth/[...all]/route.js[m
+[36m@@ -1,4 +1,17 @@[m
+[31m-import { auth } from "@/lib/auth";[m
+[32m+[m[32mimport { getAuth } from "@/lib/auth";[m
+ import { toNextJsHandler } from "better-auth/next-js";[m
+ [m
+[31m-export const { GET, POST } = toNextJsHandler(auth);[m
+[32m+[m[32mlet handlers;[m
+[32m+[m
+[32m+[m[32mfunction getHandlers() {[m
+[32m+[m[32m  handlers ??= toNextJsHandler(getAuth());[m
+[32m+[m[32m  return handlers;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport async function GET(request) {[m
+[32m+[m[32m  return getHandlers().GET(request);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport async function POST(request) {[m
+[32m+[m[32m  return getHandlers().POST(request);[m
+[32m+[m[32m}[m
+[1mdiff --git a/app/api/auth/quick-gmail/route.js b/app/api/auth/quick-gmail/route.js[m
+[1mindex 971cc2e..41543f7 100644[m
+[1m--- a/app/api/auth/quick-gmail/route.js[m
+[1m+++ b/app/api/auth/quick-gmail/route.js[m
+[36m@@ -1,5 +1,5 @@[m
+ import { NextResponse } from "next/server";[m
+[31m-import { auth } from "@/lib/auth";[m
+[32m+[m[32mimport { getAuth } from "@/lib/auth";[m
+ [m
+ export async function POST(request) {[m
+   try {[m
+[36m@@ -25,7 +25,7 @@[m [mexport async function POST(request) {[m
+ [m
+     // Try sign up first[m
+     try {[m
+[31m-      result = await auth.api.signUpEmail({[m
+[32m+[m[32m      result = await getAuth().api.signUpEmail({[m
+         body: {[m
+           email: cleanEmail,[m
+           password: defaultPassword,[m
+[36m@@ -37,7 +37,7 @@[m [mexport async function POST(request) {[m
+     } catch {[m
+       // Already registered - sign in instead[m
+       try {[m
+[31m-        result = await auth.api.signInEmail({[m
+[32m+[m[32m        result = await getAuth().api.signInEmail({[m
+           body: {[m
+             email: cleanEmail,[m
+             password: defaultPassword,[m
+[1mdiff --git a/app/api/orders/[id]/return/route.js b/app/api/orders/[id]/return/route.js[m
+[1mindex 8ce8a4b..6872463 100644[m
+[1m--- a/app/api/orders/[id]/return/route.js[m
+[1m+++ b/app/api/orders/[id]/return/route.js[m
+[36m@@ -1,13 +1,13 @@[m
+ import { NextResponse } from "next/server";[m
+ import connectToDatabase from "@/lib/mongodb";[m
+[31m-import { auth } from "@/lib/auth";[m
+[32m+[m[32mimport { getAuth } from "@/lib/auth";[m
+ import Order from "@/models/Order";[m
+ [m
+ const RETURN_WINDOW_DAYS = 7;[m
+ [m
+ export async function POST(request, context) {[m
+   try {[m
+[31m-    const session = await auth.api.getSession({ headers: request.headers });[m
+[32m+[m[32m    const session = await getAuth().api.getSession({ headers: request.headers });[m
+     if (!session?.user?.email) {[m
+       return NextResponse.json([m
+         { success: false, error: "Please sign in to request a return." },[m
+[1mdiff --git a/app/api/payments/bkash/route.js b/app/api/payments/bkash/route.js[m
+[1mindex 3b39e2b..f5120fd 100644[m
+[1m--- a/app/api/payments/bkash/route.js[m
+[1m+++ b/app/api/payments/bkash/route.js[m
+[36m@@ -1,5 +1,5 @@[m
+ import { NextResponse } from "next/server";[m
+[31m-import { auth } from "@/lib/auth";[m
+[32m+[m[32mimport { getAuth } from "@/lib/auth";[m
+ import { bkashRequest, getBkashConfig } from "@/lib/bkash";[m
+ import connectToDatabase from "@/lib/mongodb";[m
+ import Order from "@/models/Order";[m
+[36m@@ -27,7 +27,7 @@[m [mfunction getCallbackBaseUrl(request) {[m
+ export async function POST(request) {[m
+   let order;[m
+   try {[m
+[31m-    const session = await auth.api.getSession({ headers: request.headers });[m
+[32m+[m[32m    const session = await getAuth().api.getSession({ headers: request.headers });[m
+     if (!session?.user?.email) {[m
+       return NextResponse.json([m
+         { success: false, error: "Please sign in before paying with bKash." },[m
+[1mdiff --git a/app/api/payments/sslcommerz/route.js b/app/api/payments/sslcommerz/route.js[m
+[1mindex a610377..8157791 100644[m
+[1m--- a/app/api/payments/sslcommerz/route.js[m
+[1m+++ b/app/api/payments/sslcommerz/route.js[m
+[36m@@ -1,5 +1,5 @@[m
+ import { NextResponse } from "next/server";[m
+[31m-import { auth } from "@/lib/auth";[m
+[32m+[m[32mimport { getAuth } from "@/lib/auth";[m
+ import connectToDatabase from "@/lib/mongodb";[m
+ import { getSslcommerzConfig, getStoreBaseUrl } from "@/lib/sslcommerz";[m
+ import { resolveOrderItems } from "@/lib/order-checkout";[m
+[36m@@ -17,7 +17,7 @@[m [mfunction getCustomerAddress(customer) {[m
+ export async function POST(request) {[m
+   let order;[m
+   try {[m
+[31m-    const session = await auth.api.getSession({ headers: request.headers });[m
+[32m+[m[32m    const session = await getAuth().api.getSession({ headers: request.headers });[m
+     if (!session?.user?.email) {[m
+       return NextResponse.json([m
+         { success: false, error: "Please sign in before starting checkout." },[m
+[1mdiff --git a/app/auth/signin/page.js b/app/auth/signin/page.js[m
+[1mindex e79fb9c..6af055e 100644[m
+[1m--- a/app/auth/signin/page.js[m
+[1m+++ b/app/auth/signin/page.js[m
+[36m@@ -59,18 +59,11 @@[m [mexport default function SignInPage() {[m
+ [m
+       // If we get here without a redirect, something went wrong[m
+       if (res?.error) {[m
+[31m-        setErrorMsg([m
+[31m-          res.error.message ||[m
+[31m-            "Google sign-in failed. Please use email & password instead."[m
+[31m-        );[m
+[31m-        setLoading(false);[m
+[32m+[m[32m        router.push("/auth/signup");[m
+       }[m
+       // If redirect happened, browser navigates away — loading stays true[m
+[31m-    } catch (err) {[m
+[31m-      setErrorMsg([m
+[31m-        err.message || "Could not connect to Google. Please try again."[m
+[31m-      );[m
+[31m-      setLoading(false);[m
+[32m+[m[32m    } catch {[m
+[32m+[m[32m      router.push("/auth/signup");[m
+     }[m
+   };[m
+ [m
+[1mdiff --git a/lib/auth.js b/lib/auth.js[m
+[1mindex 98d67bd..79af7a3 100644[m
+[1m--- a/lib/auth.js[m
+[1m+++ b/lib/auth.js[m
+[36m@@ -1,60 +1,85 @@[m
+ import { betterAuth } from "better-auth";[m
+ import { mongodbAdapter } from "better-auth/adapters/mongodb";[m
+ import { MongoClient } from "mongodb";[m
+[31m-import { getMongoDnsFallback } from "@/lib/mongodb-dns";[m
+[32m+[m[32mimport { getMongoDnsFallback, getMongoUri } from "@/lib/mongodb-dns";[m
+ [m
+[31m-const uri = process.env.MONGODB_URI;[m
+[32m+[m[32mlet authInstance;[m
+ [m
+[31m-if (!uri) {[m
+[31m-  throw new Error("Missing MONGODB_URI in environment variables");[m
+[31m-}[m
+[32m+[m[32mexport function getAuth() {[m
+[32m+[m[32m  if (authInstance) {[m
+[32m+[m[32m    return authInstance;[m
+[32m+[m[32m  }[m
+ [m
+[31m-const mongoDnsFallback = getMongoDnsFallback(uri);[m
+[32m+[m[32m  const secret = process.env.BETTER_AUTH_SECRET?.trim();[m
+[32m+[m[32m  if (!secret) {[m
+[32m+[m[32m    throw new Error("Missing BETTER_AUTH_SECRET environment variable.");[m
+[32m+[m[32m  }[m
+ [m
+[31m-// ---------- Singleton MongoClient (native driver, NOT Mongoose) ----------[m
+[31m-// We use a module-level singleton to avoid creating multiple connections[m
+[31m-// when Next.js hot-reloads modules in development.[m
+[32m+[m[32m  const configuredBaseURL = process.env.BETTER_AUTH_URL?.trim();[m
+[32m+[m[32m  const baseURL =[m
+[32m+[m[32m    configuredBaseURL ||[m
+[32m+[m[32m    (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "");[m
+ [m
+[31m-let client;[m
+[32m+[m[32m  if (!baseURL) {[m
+[32m+[m[32m    throw new Error("Missing BETTER_AUTH_URL environment variable.");[m
+[32m+[m[32m  }[m
+ [m
+[31m-if (process.env.NODE_ENV === "development") {[m
+[31m-  // In development, cache on the global object to survive HMR[m
+[31m-  global._mongoNativeClient ??= new MongoClient(uri, mongoDnsFallback);[m
+[31m-  client = global._mongoNativeClient;[m
+[31m-} else {[m
+[31m-  client = new MongoClient(uri, mongoDnsFallback);[m
+[31m-}[m
+[32m+[m[32m  let parsedBaseURL;[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    parsedBaseURL = new URL(baseURL);[m
+[32m+[m[32m  } catch {[m
+[32m+[m[32m    throw new Error("Invalid BETTER_AUTH_URL. Use the full public site URL.");[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if ([m
+[32m+[m[32m    !["http:", "https:"].includes(parsedBaseURL.protocol) ||[m
+[32m+[m[32m    (process.env.NODE_ENV === "production" && parsedBaseURL.protocol !== "https:")[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    throw new Error("BETTER_AUTH_URL must use HTTPS in production.");[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const authBaseURL = parsedBaseURL.origin;[m
+[32m+[m[32m  const uri = getMongoUri();[m
+[32m+[m[32m  const mongoDnsFallback = getMongoDnsFallback(uri);[m
+[32m+[m[32m  let client;[m
+[32m+[m
+[32m+[m[32m  if (process.env.NODE_ENV === "development") {[m
+[32m+[m[32m    global._mongoNativeClient ??= new MongoClient(uri, mongoDnsFallback);[m
+[32m+[m[32m    client = global._mongoNativeClient;[m
+[32m+[m[32m  } else {[m
+[32m+[m[32m    client = new MongoClient(uri, mongoDnsFallback);[m
+[32m+[m[32m  }[m
+ [m
+[31m-const db = client.db("barakat_store");[m
+[31m-[m
+[31m-// ---------- Export the betterAuth instance ----------[m
+[31m-export const auth = betterAuth({[m
+[31m-  database: mongodbAdapter(db),[m
+[31m-  emailAndPassword: {[m
+[31m-    enabled: true,[m
+[31m-  },[m
+[31m-  account: {[m
+[31m-    accountLinking: {[m
+[31m-      trustedProviders: ["google"],[m
+[31m-      requireLocalEmailVerified: false,[m
+[31m-      updateUserInfoOnLink: true,[m
+[32m+[m[32m  authInstance = betterAuth({[m
+[32m+[m[32m    database: mongodbAdapter(client.db("barakat_store")),[m
+[32m+[m[32m    emailAndPassword: {[m
+[32m+[m[32m      enabled: true,[m
+     },[m
+[31m-  },[m
+[31m-  socialProviders: {[m
+[31m-    google: {[m
+[31m-      clientId: process.env.GOOGLE_CLIENT_ID,[m
+[31m-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,[m
+[32m+[m[32m    account: {[m
+[32m+[m[32m      accountLinking: {[m
+[32m+[m[32m        trustedProviders: ["google"],[m
+[32m+[m[32m        requireLocalEmailVerified: false,[m
+[32m+[m[32m        updateUserInfoOnLink: true,[m
+[32m+[m[32m      },[m
+[32m+[m[32m    },[m
+[32m+[m[32m    socialProviders: {[m
+[32m+[m[32m      google: {[m
+[32m+[m[32m        clientId: process.env.GOOGLE_CLIENT_ID,[m
+[32m+[m[32m        clientSecret: process.env.GOOGLE_CLIENT_SECRET,[m
+[32m+[m[32m      },[m
+     },[m
+[31m-  },[m
+[31m-  user: {[m
+[31m-    additionalFields: {[m
+[31m-      role: {[m
+[31m-        type: "string",[m
+[31m-        defaultValue: "customer",[m
+[32m+[m[32m    user: {[m
+[32m+[m[32m      additionalFields: {[m
+[32m+[m[32m        role: {[m
+[32m+[m[32m          type: "string",[m
+[32m+[m[32m          defaultValue: "customer",[m
+[32m+[m[32m        },[m
+       },[m
+     },[m
+[31m-  },[m
+[31m-  secret: process.env.BETTER_AUTH_SECRET,[m
+[31m-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",[m
+[31m-  trustedOrigins: [process.env.BETTER_AUTH_URL || "http://localhost:3000"],[m
+[31m-});[m
+[32m+[m[32m    secret,[m
+[32m+[m[32m    baseURL: authBaseURL,[m
+[32m+[m[32m    trustedOrigins: [authBaseURL],[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  return authInstance;[m
+[32m+[m[32m}[m
+[1mdiff --git a/lib/mongodb-dns.js b/lib/mongodb-dns.js[m
+[1mindex 31ecc9c..eed0f9a 100644[m
+[1m--- a/lib/mongodb-dns.js[m
+[1m+++ b/lib/mongodb-dns.js[m
+[36m@@ -14,6 +14,40 @@[m [mconst dnsFailureCodes = new Set([[m
+ ]);[m
+ const dnsStateKey = Symbol.for("barakat-store.mongodb-dns-fallback");[m
+ [m
+[32m+[m[32mfunction parseMongoUri(uri) {[m
+[32m+[m[32m  let parsedUri;[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    parsedUri = new URL(uri.trim());[m
+[32m+[m[32m  } catch {[m
+[32m+[m[32m    throw new Error([m
+[32m+[m[32m      "Invalid MONGODB_URI. Use a valid mongodb:// or mongodb+srv:// connection string."[m
+[32m+[m[32m    );[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if ([m
+[32m+[m[32m    !["mongodb:", "mongodb+srv:"].includes(parsedUri.protocol) ||[m
+[32m+[m[32m    !parsedUri.hostname[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    throw new Error([m
+[32m+[m[32m      "Invalid MONGODB_URI. Use a valid mongodb:// or mongodb+srv:// connection string."[m
+[32m+[m[32m    );[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return parsedUri;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport function getMongoUri() {[m
+[32m+[m[32m  const uri = process.env.MONGODB_URI?.trim();[m
+[32m+[m
+[32m+[m[32m  if (!uri) {[m
+[32m+[m[32m    throw new Error("Missing MONGODB_URI environment variable.");[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  parseMongoUri(uri);[m
+[32m+[m[32m  return uri;[m
+[32m+[m[32m}[m
+[32m+[m
+ function normalizeHostname(hostname) {[m
+   return hostname.toLowerCase().replace(/\.$/, "");[m
+ }[m
+[36m@@ -173,7 +207,7 @@[m [mfunction createLookup(srvTargets) {[m
+ }[m
+ [m
+ export function getMongoDnsFallback(uri) {[m
+[31m-  const parsedUri = new URL(uri);[m
+[32m+[m[32m  const parsedUri = parseMongoUri(uri);[m
+ [m
+   if (parsedUri.protocol !== "mongodb+srv:") {[m
+     return {};[m
+[1mdiff --git a/lib/mongodb.js b/lib/mongodb.js[m
+[1mindex 082ba39..71fa86e 100644[m
+[1m--- a/lib/mongodb.js[m
+[1m+++ b/lib/mongodb.js[m
+[36m@@ -1,13 +1,5 @@[m
+ import mongoose from "mongoose";[m
+[31m-import { getMongoDnsFallback } from "@/lib/mongodb-dns";[m
+[31m-[m
+[31m-const MONGODB_URI = process.env.MONGODB_URI;[m
+[31m-[m
+[31m-if (!MONGODB_URI) {[m
+[31m-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");[m
+[31m-}[m
+[31m-[m
+[31m-const mongoDnsFallback = getMongoDnsFallback(MONGODB_URI);[m
+[32m+[m[32mimport { getMongoDnsFallback, getMongoUri } from "@/lib/mongodb-dns";[m
+ [m
+ let cached = global.mongoose;[m
+ [m
+[36m@@ -21,12 +13,13 @@[m [masync function connectToDatabase() {[m
+   }[m
+ [m
+   if (!cached.promise) {[m
+[32m+[m[32m    const mongoUri = getMongoUri();[m
+     const opts = {[m
+       bufferCommands: false,[m
+[31m-      ...mongoDnsFallback,[m
+[32m+[m[32m      ...getMongoDnsFallback(mongoUri),[m
+     };[m
+ [m
+[31m-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {[m
+[32m+[m[32m    cached.promise = mongoose.connect(mongoUri, opts).then((mongooseInstance) => {[m
+       return mongooseInstance;[m
+     });[m
+   }[m

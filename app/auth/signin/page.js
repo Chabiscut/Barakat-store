@@ -59,18 +59,11 @@ export default function SignInPage() {
 
       // If we get here without a redirect, something went wrong
       if (res?.error) {
-        setErrorMsg(
-          res.error.message ||
-            "Google sign-in failed. Please use email & password instead."
-        );
-        setLoading(false);
+        router.push("/auth/signup");
       }
       // If redirect happened, browser navigates away — loading stays true
-    } catch (err) {
-      setErrorMsg(
-        err.message || "Could not connect to Google. Please try again."
-      );
-      setLoading(false);
+    } catch {
+      router.push("/auth/signup");
     }
   };
 

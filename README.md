@@ -65,4 +65,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
+Set these server-side environment variables in Vercel (and in `.env.local` for local development). Configure `BETTER_AUTH_URL` separately for each Vercel environment that uses a different domain:
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `MONGODB_URI` | Yes | A MongoDB connection string beginning with `mongodb+srv://` or `mongodb://`. Copy the connection string from your MongoDB provider and replace its username, password, and database as needed. |
+| `BETTER_AUTH_SECRET` | Yes | A long, random secret used to sign authentication data. |
+| `BETTER_AUTH_URL` | Yes in production | The canonical public HTTPS URL of this deployment, with no trailing slash. |
+| `GOOGLE_CLIENT_ID` | For Google sign-in | OAuth client ID from Google Cloud. |
+| `GOOGLE_CLIENT_SECRET` | For Google sign-in | OAuth client secret from Google Cloud. |
+
+Set optional payment credentials only if enabling those payment providers. Do not commit real credentials or prefix server-only secrets with `NEXT_PUBLIC_`. Remove any surrounding quotes or copied whitespace/newlines from the MongoDB connection string. The application validates configuration and initializes database clients when a request needs them, rather than while Next.js collects route configuration during the build.
+
+For Google sign-in, add the production site's origin to the Google OAuth client's authorized JavaScript origins and `https://<your-domain>/api/auth/callback/google` to its authorized redirect URIs.
+
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

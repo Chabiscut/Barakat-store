@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import { auth } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import Order from "@/models/Order";
 
 const RETURN_WINDOW_DAYS = 7;
 
 export async function POST(request, context) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getAuth().api.getSession({ headers: request.headers });
     if (!session?.user?.email) {
       return NextResponse.json(
         { success: false, error: "Please sign in to request a return." },

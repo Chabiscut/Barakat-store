@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { bkashRequest, getBkashConfig } from "@/lib/bkash";
 import connectToDatabase from "@/lib/mongodb";
 import Order from "@/models/Order";
@@ -27,7 +27,7 @@ function getCallbackBaseUrl(request) {
 export async function POST(request) {
   let order;
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getAuth().api.getSession({ headers: request.headers });
     if (!session?.user?.email) {
       return NextResponse.json(
         { success: false, error: "Please sign in before paying with bKash." },
