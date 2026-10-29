@@ -50,20 +50,24 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      // signIn.social() triggers a browser redirect to Google.
-      // If it returns at all (without redirecting), there was an error.
       const res = await signIn.social({
         provider: "google",
         callbackURL: "/",
       });
 
-      // If we get here without a redirect, something went wrong
       if (res?.error) {
-        router.push("/auth/signup");
+        setErrorMsg(
+          res.error.message ||
+            "Google sign-in failed. Check that Google OAuth is configured for this site and try again."
+        );
+        setLoading(false);
       }
-      // If redirect happened, browser navigates away — loading stays true
-    } catch {
-      router.push("/auth/signup");
+    } catch (error) {
+      setErrorMsg(
+        error.message ||
+          "Google sign-in failed. Check that Google OAuth is configured for this site and try again."
+      );
+      setLoading(false);
     }
   };
 

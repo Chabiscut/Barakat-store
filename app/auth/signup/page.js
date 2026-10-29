@@ -74,11 +74,17 @@ export default function SignUpPage() {
       });
 
       if (error) {
-        setErrorMessage(error.message || "Google sign-up failed. Please try again.");
+        setErrorMessage(
+          error.message ||
+            "Google sign-up failed. Check that Google OAuth is configured for this site and try again."
+        );
         setLoading(false);
       }
     } catch (error) {
-      setErrorMessage(error.message || "Google sign-up failed. Please try again.");
+      setErrorMessage(
+        error.message ||
+          "Google sign-up failed. Check that Google OAuth is configured for this site and try again."
+      );
       setLoading(false);
     }
   };
